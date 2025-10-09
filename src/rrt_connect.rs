@@ -3,29 +3,30 @@ use rand::rngs::ThreadRng;
 use crate::{Point, Space, Tree};
 
 pub struct RRTConnect<T, S> {
-    pub start_tree: Tree<T>,
-    pub goal_tree: Tree<T>,
+    pub start_tree: T,
+    pub goal_tree: T,
     pub space: S,
     pub d: f64,
     rng: ThreadRng,
 }
 
-impl<T, S> RRTConnect<T, S>
+impl<T, P, S> RRTConnect<T, S>
 where
-    T: Point,
-    S: Space<Point = T>,
+    P: Point,
+    T: Tree<P>,
+    S: Space<Point = P>,
 {
-    pub fn new(start: T, goal: T, space: S, d: f64) -> Self {
+    pub fn new(start: P, goal: P, space: S, d: f64) -> Self {
         Self {
-            start_tree: Tree::new(start),
-            goal_tree: Tree::new(goal),
+            start_tree: T::new(start),
+            goal_tree: T::new(goal),
             space,
             rng: rand::rng(),
             d,
         }
     }
 
-    pub fn step(&mut self) -> StepResult<T> {
+    pub fn step(&mut self) -> StepResult<P> {
         let sample = self.space.sample(&mut self.rng);
         let (tree_a, tree_b, start_tree) = if self.start_tree.size() <= self.goal_tree.size() {
             (&mut self.start_tree, &mut self.goal_tree, true)
@@ -45,23 +46,42 @@ where
                     new,
                     nearest_start: if start_tree {nearest} else {nearest_in_b},
                     nearest_goal: if start_tree {nearest_in_b} else {nearest},
+                    is_start: start_tree,
                     is_goal: true,
                 });
             }
-            tree_a.expand(nearest, new);
+            tree_a.expand(nearest, new.clone());
+            StepResult::Success(SuccessStep {
+                new,
+                nearest_start: if start_tree {nearest} else {nearest_in_b},
+                nearest_goal: if start_tree {nearest_in_b} else {nearest},
+                is_start: start_tree,
+                is_goal: false,
+            })
+        } else {
+            StepResult::Failure
         }
-        StepResult::Failure
+    }
+
+    pub fn path(&self, step_result: SuccessStep<P>) -> Vec<P> {
+        let mut start_path = self.start_tree.path(step_result.nearest_start);
+        let mut goal_path = self.goal_tree.path(step_result.nearest_goal);
+        goal_path.reverse();
+        start_path.push(step_result.new);
+        start_path.extend(goal_path);
+        start_path
     }
 }
 
-pub enum StepResult<T> {
-    Success(SuccessStep<T>),
+pub enum StepResult<P> {
+    Success(SuccessStep<P>),
     Failure,
 }
 
-pub struct SuccessStep<T> {
+pub struct SuccessStep<P> {
     pub is_goal: bool,
-    pub new: T,
+    pub new: P,
+    pub is_start: bool,
     pub nearest_start: usize,
     pub nearest_goal: usize,
 }

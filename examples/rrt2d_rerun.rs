@@ -1,6 +1,6 @@
 use motion_planning::{
     rrt::RRT,
-    utils::{CubeSpace, Goal, Rect},
+    utils::{CubeSpace, Goal, Rect, SimpleTree}, Tree,
 };
 use nalgebra::Vector2;
 use rerun::{Boxes2D, Color, Points2D};
@@ -65,7 +65,7 @@ fn main() {
     let mut lines: Vec<[[f32; 2]; 2]> = vec![];
     let mut points: Vec<(f32, f32)> = vec![];
 
-    let mut rrt_solver = RRT::new(start, goal, space, 0.2);
+    let mut rrt_solver = RRT::<SimpleTree<_>, _, _>::new(start, goal, space, 0.2);
     let mut path = vec![];
     while rrt_solver.tree_size() < 10000 {
         let result = rrt_solver.step();

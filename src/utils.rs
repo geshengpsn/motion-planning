@@ -1,7 +1,7 @@
 use nalgebra::Vector2;
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{Point, Set, Space};
+use crate::{Point, Set, Space, Tree};
 
 impl Point for Vector2<f64> {
     fn distance(&self, other: &Self) -> f64 {
@@ -141,5 +141,58 @@ impl Space for CubeSpace {
             }
         }
         true
+    }
+}
+
+
+pub struct SimpleTree<T> {
+    // parent index, point
+    nodes: Vec<(usize, T)>,
+}
+
+impl<T> Tree<T> for SimpleTree<T>
+where
+    T: Point,
+{
+    fn new(start: T) -> Self {
+        Self {
+            nodes: vec![(0, start)],
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.nodes.len()
+    }
+
+    fn get(&self, index: usize) -> &T {
+        &self.nodes[index].1
+    }
+
+    fn expand(&mut self, from: usize, to: T) {
+        self.nodes.push((from, to));
+    }
+
+    fn path(&self, end: usize) -> Vec<T> {
+        let mut path = vec![];
+        let mut current = end;
+        while current != 0 {
+            path.push(self.get(current).clone());
+            current = self.nodes[current].0;
+        }
+        path.push(self.get(0).clone());
+        path.reverse();
+        path
+    }
+
+    fn nearest(&self, point: &T) -> usize {
+        let mut min_distance = f64::MAX;
+        let mut min_index = 0;
+        for (index, (_, p)) in self.nodes.iter().enumerate() {
+            if p.distance(point) < min_distance {
+                min_distance = p.distance(point);
+                min_index = index;
+            }
+        }
+        min_index
     }
 }
